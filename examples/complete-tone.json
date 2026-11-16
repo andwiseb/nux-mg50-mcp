@@ -1,0 +1,75 @@
+{
+  "preset": "43A",
+  "preset_name": "AI LEAD",
+  "scene": 1,
+  "tempo_bpm": 112,
+  "stomp_assignments": {
+    "A": ["EFX"],
+    "B": ["DLY"],
+    "C": ["RVB"]
+  },
+  "routing": {
+    "mode": "parallel_merge",
+    "chain_a": ["NG", "CMP", "EFX", "AMP", "IR"],
+    "chain_b": ["MOD", "DLY", "RVB"],
+    "split_mode": "dual",
+    "a_level": 100,
+    "b_level": 72
+  },
+  "modules": {
+    "NG": {
+      "enabled": true,
+      "model": "Noise Gate",
+      "parameters": {"Sens": 38, "Decay": 46}
+    },
+    "EFX": {
+      "enabled": true,
+      "model": "T Screamer",
+      "parameters": {"Drive": 24, "Tone": 51, "Level": 68}
+    },
+    "AMP": {
+      "enabled": true,
+      "model": "Brit 800",
+      "parameters": {
+        "Inputs": 1,
+        "Gain": 63,
+        "Master": 55,
+        "Bass": 47,
+        "Middle": 62,
+        "Treble": 55,
+        "Pres.": 48
+      }
+    },
+    "DLY": {
+      "enabled": true,
+      "model": "Digi Delay",
+      "parameters": {"E.Level": 21, "F.Back": 28, "D.Time": 42}
+    },
+    "RVB": {
+      "enabled": true,
+      "model": "Plate",
+      "parameters": {"Decay": 37, "Level": 19}
+    }
+  },
+  "scenes": {
+    "2": {
+      "modules": {
+        "EFX": {"parameters": {"Drive": 38, "Level": 72}},
+        "DLY": {"parameters": {"E.Level": 29}}
+      },
+      "stomp": {"DLY": true}
+    },
+    "3": {
+      "modules": {
+        "AMP": {"parameters": {"Gain": 72, "Master": 59}},
+        "RVB": {"parameters": {"Level": 25}}
+      },
+      "stomp": {"EFX": true, "DLY": true}
+    }
+  },
+  "settings": {
+    "midi": {"channel": 1, "midi_in": true, "midi_out": true},
+    "other": {"tap": "preset", "patch_tail": true}
+  },
+  "save": false
+}
