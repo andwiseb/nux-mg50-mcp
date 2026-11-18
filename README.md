@@ -65,7 +65,7 @@ remain usable and produce an explicit forward-compatibility warning.
 With [uv](https://docs.astral.sh/uv/):
 
 ```bash
-git clone https://github.com/YOUR_NAME/nux-mg50-mcp.git
+git clone https://github.com/andwiseb/nux-mg50-mcp.git
 cd nux-mg50-mcp
 uv sync --extra dev
 ./scripts/build-bridge.sh
