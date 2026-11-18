@@ -15,6 +15,7 @@ BOOLEAN = {"type": "boolean"}
 
 DEVICE_SURFACE: dict[str, Any] = {
     "presets": {"range": "1A-99C", "save_default": False},
+    "preset_volume_db": {"type": "number", "min": -12, "max": 12},
     "scenes": [1, 2, 3],
     "tempo_bpm": {"type": "number", "min": 40, "max": 240},
     "stomp_switches": ["A", "B", "C"],

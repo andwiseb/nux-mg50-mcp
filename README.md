@@ -9,6 +9,10 @@ states, signal-chain routing, effect/amp/IR models, every named knob and device
 settings. The server validates it, orders the changes, applies them, and can leave the
 result in the live buffer or explicitly save it.
 
+Firmware 1.1.1 preset volume is represented as `preset_volume_db` (−12 to +12 dB).
+The Accessibility driver applies it only when the installed NUX Audio build exposes
+the top-level dB readout and otherwise fails closed with a clear compatibility error.
+
 > This project is independent and is not affiliated with or endorsed by NUX or
 > Cherub Technology. NUX and MG-50Li are trademarks of their respective owners.
 
@@ -20,6 +24,7 @@ result in the live buffer or explicitly save it.
 - Typed serial, split A/B + merge, and A-to-OUT/B-to-XLR routing plans
 - NG, CMP, EFX, AMP, Image AMP, power amp, IR, EQ, S/R, DLY, RVB, WAH, MOD and P.L
 - Model-specific knobs plus a forward-compatible arbitrary-control escape hatch
+- One-message import of multilingual tone reports through `nux_apply_text`
 - Input trim, global EQ, output/USB console, MIDI and other global settings
 - Read-only dry-run plans, UI snapshots and diagnostics
 - A deterministic mock driver for development without hardware
@@ -33,6 +38,19 @@ found.
 The macOS driver uses NUX Audio's Accessibility surface. A transport boundary is kept
 separate so a verified direct USB-MIDI implementation can be added without changing
 the MCP tools or tone JSON format. See [architecture](docs/ARCHITECTURE.md).
+
+Long tone reports are supported at the MCP-client layer as well as short commands.
+The report may be in any language or mix prose, headings, and tables. The client
+semantically reduces the final applicable settings to a `ToneSpec`; the server then
+validates and orders that device-only structure. Research notes, alternate guitars,
+conditional troubleshooting values, and playing advice are not applied as controls.
+This language-neutral split is intentional: the hardware server never relies on a
+fixed list of translated words such as “on”, “scene”, or “gain”.
+
+Before any UI mutation, known model names, parameter names, numeric ranges, and enum
+values are checked against the bundled device catalogue. A bad extraction therefore
+fails before the selected scene's chain is rebuilt. Unknown future firmware models
+remain usable and produce an explicit forward-compatibility warning.
 
 ## Requirements
 
@@ -98,6 +116,31 @@ configuration equivalent to:
 Restart the client after changing its configuration. The client process itself needs
 Accessibility permission because it launches the native helper.
 
+## Easiest use: paste a tone report
+
+You do not need to write JSON. Paste a tone report into Claude, ChatGPT/Codex, or any
+capable MCP client and add one sentence describing the destination and persistence:
+
+> Apply this report to the currently selected preset and save it. Use the explicit
+> final tables; ignore research notes, alternate guitars and conditional calibration
+> suggestions.
+
+The client calls `nux_apply_text` with the original document and its semantic
+`ToneSpec` extraction. The server validates every known model, enum, control and range
+before touching NUX Audio, then applies the operations in a safe order. A SHA-256
+receipt identifies the exact source text used for the extraction.
+
+Saving is controlled by a separate outer `save` flag. Text pasted from a report cannot
+silently grant itself permission to overwrite a preset. If you say “do not save” or do
+not mention persistence, the result stays in the live buffer. If you name no preset
+slot, the server never invents one; an explicit save applies to the currently selected
+slot.
+
+The language understanding comes from the MCP host you are already talking to. The
+local server needs no OpenAI/Anthropic API key and contains no fragile Turkish/English
+keyword parser. This also lets it handle long mixed-language prose and tables while
+the hardware layer remains deterministic and auditable.
+
 ## Example request
 
 You can say:
@@ -107,6 +150,8 @@ You can say:
 
 The agent should call `nux_plan_tone` or `nux_apply_tone` with a structured `ToneSpec`.
 A complete example is in [examples/complete-tone.json](examples/complete-tone.json).
+An example distilled from a long-form tone report is in
+[examples/beggin-17.json](examples/beggin-17.json).
 Scene-local changes default to S1 when `scene` is omitted; pass `scene: 2` or `3`
 explicitly for the other scenes.
 
@@ -126,6 +171,7 @@ uv run nux-mg50 apply --dry-run examples/complete-tone.json
 | `nux_capabilities` | Describe models, parameters, ranges, routing and settings |
 | `nux_plan_tone` | Validate and order a complete tone without changing anything |
 | `nux_apply_tone` | Apply the full `ToneSpec` surface |
+| `nux_apply_text` | Validate and apply a semantic extraction from pasted prose/tables; records a source receipt |
 | `nux_set_scene` | Select S1/S2/S3 |
 | `nux_set_preset` | Select a preset and optionally save |
 | `nux_set_tempo` | Set BPM |

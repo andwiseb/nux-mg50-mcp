@@ -632,6 +632,21 @@ class NuxAudioDriver(Driver):
                 raise ControlNotFound("preset name text field not found")
             node = max(fields, key=lambda item: item.width)
             self.bridge.run("set-snapshot", node.index, operation.value)
+        elif control == "preset_volume":
+            window = self.bridge.window()
+            candidates = [
+                item
+                for item in self.bridge.nodes()
+                if item.role == "AXStaticText"
+                and re.fullmatch(r"[+-]?\d+(?:\.\d+)?\s*dB", item.text.strip(), re.IGNORECASE)
+                and window.y + 50 <= item.y <= window.y + 180
+            ]
+            if not candidates:
+                raise ControlNotFound(
+                    "preset volume readout not found; this control requires MG-50Li "
+                    "firmware/editor support that exposes the ±12 dB value"
+                )
+            node = self.bridge.set_numeric_readout(candidates[0], operation.value)
         elif control == "tempo":
             fields = [
                 item

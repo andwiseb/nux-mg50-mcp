@@ -458,6 +458,26 @@ func run() async throws {
     case "activate":
         guard let running = app() else { throw BridgeFailure.message("NUX Audio is not running") }
         try emit(Result(ok: running.activate(options: [.activateAllWindows]), message: nil))
+    case "move-window":
+        guard args.count == 3,
+              let x = Double(args[1]),
+              let y = Double(args[2]) else {
+            throw BridgeFailure.message("usage: move-window X Y")
+        }
+        let window = try rootElement()
+        var point = CGPoint(x: x, y: y)
+        guard let value = AXValueCreate(.cgPoint, &point) else {
+            throw BridgeFailure.message("could not create window position")
+        }
+        let result = AXUIElementSetAttributeValue(
+            window,
+            kAXPositionAttribute as CFString,
+            value
+        )
+        guard result == .success else {
+            throw BridgeFailure.message("could not move NUX Audio window: AX error \(result.rawValue)")
+        }
+        try emit(Result(ok: true, message: nil))
     case "snapshot", "debug-main":
         try emit(try stabilizedSnapshot())
     case "press-snapshot", "click-snapshot":

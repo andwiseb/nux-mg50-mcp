@@ -7,6 +7,7 @@ def test_plan_orders_preset_scene_module_and_save():
         {
             "preset": "43A",
             "scene": 2,
+            "preset_volume_db": 0,
             "modules": {"amp": {"model": "Brit 800", "enabled": True, "parameters": {"gain": 61}}},
             "save": True,
         }
@@ -19,6 +20,7 @@ def test_plan_orders_preset_scene_module_and_save():
         ("select", "AMP.model"),
         ("toggle", "AMP.enabled"),
         ("set", "AMP.gain"),
+        ("set", "preset_volume"),
         ("save", "preset"),
     ]
 

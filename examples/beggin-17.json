@@ -1,0 +1,66 @@
+{
+  "preset_name": "BEGGIN 17",
+  "preset_volume_db": 0.0,
+  "scene": 1,
+  "tempo_bpm": 134,
+  "routing": {
+    "mode": "serial",
+    "chain": ["AMP", "IR", "CMP", "MOD", "RVB"]
+  },
+  "modules": {
+    "AMP": {
+      "enabled": true,
+      "model": "Twin Rvb",
+      "parameters": {
+        "inputs": 1,
+        "bright": false,
+        "gain": 64,
+        "bass": 42,
+        "middle": 57,
+        "treble": 55,
+        "power amp": "6L6",
+        "bias": 53,
+        "level": 50
+      }
+    },
+    "IR": {
+      "enabled": true,
+      "model": "FTwinRvb+JENC12K",
+      "parameters": {
+        "mode": "mono",
+        "microphone": "S57",
+        "position": "cap edge",
+        "distance": "2\"",
+        "level": 0.0,
+        "low cut": 85,
+        "high cut": 6800,
+        "pan": 0
+      }
+    },
+    "CMP": {
+      "enabled": true,
+      "model": "Studio Comp",
+      "parameters": {"thr": 66, "ratio": 22, "gain": 50, "release": 47}
+    },
+    "MOD": {
+      "enabled": false,
+      "model": "ST.Chorus",
+      "parameters": {"inten.": 14, "width": 24, "rate": 17}
+    },
+    "RVB": {
+      "enabled": true,
+      "model": "Hall",
+      "parameters": {"decay": 22, "pre.d": 16, "liveliness": 42, "level": 12}
+    }
+  },
+  "scenes": {
+    "2": {
+      "modules": {"MOD": {"enabled": true}}
+    }
+  },
+  "settings": {
+    "input_trim": {"inst.1": 0.0},
+    "output_mode": "Studio Direct(Line/Phones)"
+  },
+  "save": false
+}

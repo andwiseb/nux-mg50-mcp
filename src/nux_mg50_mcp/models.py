@@ -91,6 +91,7 @@ class ToneSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
     preset: str | int | None = None
     preset_name: str | None = Field(default=None, max_length=32)
+    preset_volume_db: float | None = Field(default=None, ge=-12, le=12)
     scene: SceneNumber | None = None
     tempo_bpm: float | None = Field(default=None, ge=40, le=240)
     modules: dict[str, ModuleSpec] = Field(default_factory=dict)

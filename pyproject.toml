@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "nux-mg50-mcp"
-version = "0.2.0"
+version = "0.3.0"
 description = "Local MCP server for controlling a NUX MG-50Li through NUX Audio on macOS"
 readme = "README.md"
 requires-python = ">=3.11"

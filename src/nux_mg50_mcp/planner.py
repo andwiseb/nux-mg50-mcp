@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .catalog import canonical_module
 from .models import ApplyPlan, Operation, SceneSpec, ToneSpec
+from .validation import validate_tone_spec
 
 
 def _module_ops(modules, scene: int | None) -> list[Operation]:
@@ -87,7 +88,7 @@ def _scene_ops(
 
 def plan_tone(spec: ToneSpec) -> ApplyPlan:
     operations: list[Operation] = []
-    warnings: list[str] = []
+    warnings = validate_tone_spec(spec)
     base_scene = spec.scene or 1
     has_scene_work = bool(
         spec.routing
@@ -170,6 +171,10 @@ def plan_tone(spec: ToneSpec) -> ApplyPlan:
                 operations.append(
                     Operation(action="set", control=f"settings.{group}.{name}", value=value)
                 )
+    if spec.preset_volume_db is not None:
+        operations.append(
+            Operation(action="set", control="preset_volume", value=spec.preset_volume_db)
+        )
     if spec.preset_name:
         operations.append(Operation(action="set", control="preset_name", value=spec.preset_name))
     if spec.save:

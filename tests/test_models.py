@@ -17,11 +17,18 @@ def test_accepts_complete_surface():
     spec = ToneSpec.model_validate(
         {
             "routing": {"mode": "serial", "chain": ["NG", "AMP", "IR"]},
+            "preset_volume_db": 0.0,
             "modules": {"amp": {"model": "Brit 800", "parameters": {"gain": 62}}},
             "settings": {"midi": {"channel": 1}, "other": {"patch_tail": True}},
         }
     )
     assert spec.modules["amp"].parameters["gain"] == 62
+    assert spec.preset_volume_db == 0.0
+
+
+def test_rejects_out_of_range_preset_volume():
+    with pytest.raises(ValidationError):
+        ToneSpec(preset_volume_db=12.1)
 
 
 def test_accepts_full_settings_surface():

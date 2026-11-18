@@ -43,6 +43,24 @@ class RoutingBridge(SceneBridge):
         self.calls.append(("escape",))
 
 
+class PresetVolumeBridge(SceneBridge):
+    def __init__(self):
+        self.values = []
+
+    def window(self):
+        return UINode(0, "AXWindow", "", "", "", 10, 20, 800, 660)
+
+    def nodes(self):
+        return [
+            UINode(2, "AXStaticText", "", "", "+0.0 dB", 650, 100, 60, 20),
+            UINode(3, "AXStaticText", "", "", "0dB", 650, 400, 60, 20),
+        ]
+
+    def set_numeric_readout(self, node, value):
+        self.values.append((node, value))
+        return node
+
+
 def test_chain_is_cleared_once_in_each_scene(monkeypatch):
     driver = NuxAudioDriver(SceneBridge())
     driver._routing_mode = "split_outputs"
@@ -91,6 +109,15 @@ def test_tempo_uses_committing_wheel_readout_instead_of_ax_value_write():
     assert [(node.index, value, bounds) for node, value, bounds in bridge.values] == [
         (17, 124, {"minimum": 40, "maximum": 240})
     ]
+
+
+def test_preset_volume_uses_top_level_firmware_readout():
+    bridge = PresetVolumeBridge()
+    driver = NuxAudioDriver(bridge)
+
+    driver._apply_one(Operation(action="set", control="preset_volume", value=-1.5))
+
+    assert [(node.index, value) for node, value in bridge.values] == [(2, -1.5)]
 
 
 def test_routing_rows_match_the_observed_editor_order():

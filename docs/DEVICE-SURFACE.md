@@ -3,7 +3,7 @@
 The bundled catalogue covers:
 
 - routing: two-row serial, split parallel A/B + merge, split A→OUT/B→XLR;
-- S1/S2/S3, preset, tempo and stomp assignments;
+- S1/S2/S3, preset/name, firmware-supported ±12 dB preset volume, tempo and stomp assignments;
 - NG, CMP, drive/boost/distortion/fuzz/octave, AMP and Image AMP, power amp;
 - mono/stereo IR, microphone/position/distance, cuts, level and pan;
 - 6-band, Align and 10-band EQ;

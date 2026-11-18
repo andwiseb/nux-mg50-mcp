@@ -7,6 +7,7 @@ row explicitly tests persistence. The firmware version still needs to be recorde
 | Surface | Evidence | Status |
 |---|---|---|
 | Preset selector | Selected 97A atomically through the Flutter modal | Verified |
+| Preset volume ±12 dB | Public schema and readout driver are implemented for firmware/editor builds that expose the top-level dB value; the connected editor does not currently publish it | Firmware-gated |
 | Tempo | Painted readout clamps at 40/240; MCP set 123 exactly and restored 120. Sustained wheel events re-enter the hit-test point; stale AXValue was rejected as false evidence | Verified |
 | Serial chain | Built and verified all 13 module categories across both rows | Verified |
 | Stomp assignment | GATE1→A, AMP1→B, DLY1→A, C empty, visually inspected | Verified |
@@ -19,7 +20,7 @@ row explicitly tests persistence. The firmware version still needs to be recorde
 | Module boolean switch | Jazz Clean BRIGHT dragged off twice idempotently, then restored on | Verified |
 | Console mute readback | All five AX buttons resolved; ScreenCaptureKit reached TCC and macOS denied optional Screen Recording permission. No blind toggle was performed | Permission-gated |
 
-Every non-permission-gated row has an observed NUX Audio/device result. A successful
+Every non-permission/firmware-gated row has an observed NUX Audio/device result. A successful
 dry-run, return code, semantic AXValue, or coordinate click alone is not accepted as
 hardware evidence. Console mute remains usable after granting the optional Screen
 Recording permission documented in the README; refusing that permission deliberately

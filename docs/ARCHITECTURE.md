@@ -2,10 +2,10 @@
 
 ```text
 Claude / ChatGPT / Codex
+          │ semantic extraction
+          ├── pasted prose/tables + ToneSpec ── nux_apply_text
+          └── ToneSpec directly ─────────────── nux_apply_tone
           │ MCP stdio
-          ▼
-   Typed MCP tools
-          │ ToneSpec
           ▼
  Validator + planner ───── dry-run / mock driver
           │ ordered operations
@@ -33,6 +33,15 @@ tempo and settings. The planner converts it into deterministic operations in thi
 4. rebuild the base layout independently in each explicit non-base scene and apply its overrides;
 5. apply stomp assignments and global settings;
 6. rename/save only when requested.
+
+Natural-language interpretation deliberately stays in the MCP host. Claude/ChatGPT
+already has the multilingual semantic context needed to distinguish final tables from
+research notes and conditional alternatives. `nux_apply_text` receives both the exact
+source and that structured extraction, validates the extraction locally, and returns a
+SHA-256 source receipt. This avoids a second cloud API key and avoids pretending that a
+fixed regex/keyword parser can understand arbitrary tone reports. Its outer `save`
+argument overrides any embedded `spec.save` value, so pasted content cannot authorize
+persistence by itself.
 
 NUX Audio stores the signal chain independently in S1, S2 and S3. The planner therefore
 copies a top-level routing layout and module baseline into every explicitly requested
