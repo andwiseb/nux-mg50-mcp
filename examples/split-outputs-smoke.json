@@ -1,0 +1,12 @@
+{
+  "preset": "97A",
+  "routing": {
+    "mode": "split_outputs",
+    "chain_a": ["CMP", "EFX"],
+    "chain_b": ["MOD", "PL"],
+    "split_mode": "dual",
+    "a_level": 41,
+    "b_level": 59
+  },
+  "save": false
+}

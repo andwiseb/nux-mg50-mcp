@@ -1,0 +1,14 @@
+{
+  "preset": "97A",
+  "scene": 1,
+  "routing": {
+    "mode": "serial",
+    "chain": ["NG", "AMP", "DLY"]
+  },
+  "stomp_assignments": {
+    "A": ["NG", "DLY"],
+    "B": ["AMP"],
+    "C": []
+  },
+  "save": false
+}

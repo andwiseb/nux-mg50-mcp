@@ -1,0 +1,44 @@
+{
+  "settings": {
+    "input_trim": {"INST.1": 0},
+    "output_mode": "Studio Direct(Line/Phones)",
+    "global_eq": {
+      "enabled": false,
+      "hpf": 20,
+      "100": 0,
+      "level": 0,
+      "lpf": 20000,
+      "lpf_enabled": false
+    },
+    "display": {
+      "home_display": "graphical",
+      "boot_up_picture": "factory"
+    },
+    "brightness": {"display": 50, "footswitch": 0},
+    "parameter_follow": {"enabled": false, "amp_connects_default_ir": true},
+    "output_console": {
+      "phones": 100,
+      "output": 100,
+      "xlr": 100,
+      "input_monitor": 50,
+      "usb_mode": "normal",
+      "dry_in": "USB IN 3/4",
+      "loopback": false
+    },
+    "midi": {
+      "channel": 1,
+      "midi_in": false,
+      "midi_out": false,
+      "program_change": "1A-42C"
+    },
+    "other": {
+      "s3_scene": true,
+      "tap": "global",
+      "phones": "output",
+      "patch_rolling": "cw",
+      "patch_tail": false,
+      "language": "English"
+    }
+  },
+  "save": false
+}

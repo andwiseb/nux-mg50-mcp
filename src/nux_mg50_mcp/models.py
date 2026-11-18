@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
-
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 SceneNumber = Literal[1, 2, 3]
 
@@ -20,13 +19,6 @@ class ModuleSpec(BaseModel):
     enabled: bool | None = None
     model: str | None = None
     parameters: dict[str, float | int | str | bool] = Field(default_factory=dict)
-
-
-class SceneSpec(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    modules: dict[str, ModuleSpec] = Field(default_factory=dict)
-    tempo_bpm: float | None = Field(default=None, ge=30, le=300)
-    stomp: dict[str, bool] = Field(default_factory=dict)
 
 
 class StompAssignments(BaseModel):
@@ -54,13 +46,40 @@ class RoutingSpec(BaseModel):
     a_level: int | None = Field(default=None, ge=0, le=100)
     b_level: int | None = Field(default=None, ge=0, le=100)
 
+    @model_validator(mode="after")
+    def validate_layout(self) -> RoutingSpec:
+        if self.mode == "serial":
+            if self.chain_a or self.chain_b:
+                raise ValueError("serial routing uses chain, not chain_a/chain_b")
+            if len(self.chain) > 14:
+                raise ValueError("serial routing supports at most 14 module slots")
+        else:
+            if self.chain:
+                raise ValueError("split routing uses chain_a and chain_b, not chain")
+            limit = 6 if self.mode == "parallel_merge" else 7
+            if len(self.chain_a) > limit or len(self.chain_b) > limit:
+                raise ValueError(f"{self.mode} supports at most {limit} modules per branch")
+        return self
+
+
+class SceneSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    routing: RoutingSpec | None = None
+    modules: dict[str, ModuleSpec] = Field(default_factory=dict)
+    tempo_bpm: float | None = Field(default=None, ge=40, le=240)
+    stomp: dict[str, bool] = Field(default_factory=dict)
+
 
 class DeviceSettings(BaseModel):
     """Global/editor settings, kept data-driven for forward compatibility."""
 
     model_config = ConfigDict(extra="forbid")
     input_trim: dict[str, float] = Field(default_factory=dict)
+    output_mode: str | None = None
     global_eq: dict[str, float | int | bool | str] = Field(default_factory=dict)
+    display: dict[str, str] = Field(default_factory=dict)
+    brightness: dict[str, int] = Field(default_factory=dict)
+    parameter_follow: dict[str, bool] = Field(default_factory=dict)
     output_console: dict[str, float | int | bool | str] = Field(default_factory=dict)
     midi: dict[str, float | int | bool | str] = Field(default_factory=dict)
     other: dict[str, float | int | bool | str] = Field(default_factory=dict)
@@ -73,7 +92,7 @@ class ToneSpec(BaseModel):
     preset: str | int | None = None
     preset_name: str | None = Field(default=None, max_length=32)
     scene: SceneNumber | None = None
-    tempo_bpm: float | None = Field(default=None, ge=30, le=300)
+    tempo_bpm: float | None = Field(default=None, ge=40, le=240)
     modules: dict[str, ModuleSpec] = Field(default_factory=dict)
     scenes: dict[int, SceneSpec] = Field(default_factory=dict)
     stomp: dict[str, bool] = Field(default_factory=dict)

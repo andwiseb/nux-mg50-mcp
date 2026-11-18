@@ -24,12 +24,11 @@ result in the live buffer or explicitly save it.
 - Read-only dry-run plans, UI snapshots and diagnostics
 - A deterministic mock driver for development without hardware
 
-Preset selection, scene switching and numeric knob gestures have been exercised on a
-real MG-50Li with NUX Audio 1.1.7. The full routing vocabulary is validated and shown
-in dry-runs, but live chain reordering is deliberately rejected before any mutation
-until drag/drop calibration for the installed editor build is complete. This prevents
-the server from claiming success after a blind chain move. The same fail-closed rule
-applies whenever a visible control cannot be found.
+Preset selection, independent S1/S2/S3 chains, tempo, stomp assignments, model/knob
+changes, all three routing layouts, and the global settings pages have been exercised
+on a real MG-50Li with NUX Audio 1.1.7. The driver verifies each rebuilt chain slot
+before continuing and fails closed whenever the requested visible control cannot be
+found.
 
 The macOS driver uses NUX Audio's Accessibility surface. A transport boundary is kept
 separate so a verified direct USB-MIDI implementation can be added without changing
@@ -55,8 +54,8 @@ uv sync --extra dev
 uv run nux-mg50 doctor
 ```
 
-Grant Accessibility access to the application that launches the MCP server (for
-example Terminal, Claude Desktop or Codex) under:
+Grant Accessibility access to the application that launches the MCP server and, if
+macOS lists it separately, `.build/nux-audio-bridge` under:
 
 `System Settings → Privacy & Security → Accessibility`
 
@@ -68,6 +67,12 @@ uv run nux-mg50 request-access
 
 Open NUX Audio, connect the MG-50Li, then repeat `doctor`. A ready installation reports
 `"ready": true`.
+
+Screen Recording is optional. It is used only to read the painted color of an existing
+Console mute or pre-existing module bypass before deciding whether a click is needed.
+Named module parameter switches use absolute drag positions, and applying a complete
+tone with rebuilt chains does not require Screen Recording. On macOS 14+, grant it to
+the launcher/helper if you want idempotent readback for existing mute/bypass states.
 
 ## MCP client configuration
 
@@ -102,6 +107,8 @@ You can say:
 
 The agent should call `nux_plan_tone` or `nux_apply_tone` with a structured `ToneSpec`.
 A complete example is in [examples/complete-tone.json](examples/complete-tone.json).
+Scene-local changes default to S1 when `scene` is omitted; pass `scene: 2` or `3`
+explicitly for the other scenes.
 
 CLI dry-run:
 
@@ -125,13 +132,15 @@ uv run nux-mg50 apply --dry-run examples/complete-tone.json
 | `nux_set_stomp` | Change a stomp-assigned block |
 | `nux_assign_stomp` | Assign effect blocks to physical switch A, B or C |
 | `nux_set_module` | Change one module/model/bypass/knob set |
-| `nux_set_control` | Set a newly added or uncatalogued visible control |
+| `nux_set_control` | Set a newly added or uncatalogued visible parameter |
 
 ## Safety behavior
 
 - Changes are **not saved by default**. Set `save: true` explicitly.
 - `dry_run: true` produces the exact ordered operation list without touching the UI.
 - The server never writes guessed bytes to a preset or USB-MIDI endpoint.
+- Chain replacement is destructive only in the selected live scene; preset storage is
+  untouched until `save: true` is supplied.
 - Unknown firmware controls remain available through `nux_snapshot` and
   `nux_set_control`; the catalogue is guidance, not a version lock.
 
@@ -149,6 +158,8 @@ The native helper is intentionally small and auditable. Build it after editing:
 ```
 
 Hardware/UI verification instructions are in [CONTRIBUTING.md](CONTRIBUTING.md).
+The current device evidence and remaining checks are tracked in
+[docs/HARDWARE-VERIFICATION.md](docs/HARDWARE-VERIFICATION.md).
 
 ## License
 

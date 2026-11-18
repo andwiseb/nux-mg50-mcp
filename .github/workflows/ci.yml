@@ -7,15 +7,21 @@ on:
 jobs:
   python:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
       - run: uv sync --extra dev
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
       - run: uv run pytest
       - run: uv run python -m compileall -q src
+      - run: uv build
 
   macos-bridge:
     runs-on: macos-latest

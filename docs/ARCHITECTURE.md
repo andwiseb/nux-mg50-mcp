@@ -28,11 +28,21 @@ component.
 tempo and settings. The planner converts it into deterministic operations in this order:
 
 1. select preset and scene;
-2. select a chain module and model;
-3. set bypass/switches and knobs;
-4. repeat for explicit S1/S2/S3 overrides;
-5. apply routing and global settings (live routing fails closed until the editor build is calibrated);
-6. save only when requested.
+2. select routing and rebuild the active scene's chain when requested;
+3. select a chain module/model, then set bypass/switches and knobs;
+4. rebuild the base layout independently in each explicit non-base scene and apply its overrides;
+5. apply stomp assignments and global settings;
+6. rename/save only when requested.
+
+NUX Audio stores the signal chain independently in S1, S2 and S3. The planner therefore
+copies a top-level routing layout and module baseline into every explicitly requested
+non-base scene unless that scene provides its own routing. The driver clears at most
+once per scene per apply transaction, so split branch A and B are rebuilt together.
+
+The native helper uses semantic Accessibility nodes where NUX Audio publishes them.
+For custom-painted Flutter controls it uses calibrated coordinates relative to the
+editor window, followed by semantic/readout verification. It never sends undocumented
+USB or preset bytes.
 
 ## Direct MIDI roadmap
 

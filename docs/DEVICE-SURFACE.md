@@ -8,7 +8,17 @@ The bundled catalogue covers:
 - mono/stereo IR, microphone/position/distance, cuts, level and pan;
 - 6-band, Align and 10-band EQ;
 - delay, reverb, send/return, wah, modulation and pedal level;
-- input trims, global EQ, output/USB routing, MIDI and patch behavior.
+- input trims and output mode;
+- global EQ (enable, HPF, bands, level, LPF and LPF enable);
+- home/boot display, display and footswitch brightness, parameter-follow behavior;
+- phones/output/XLR levels, input monitor, USB mode, dry input and loopback;
+- MIDI channel/in/out/program-change range;
+- S3 behavior, tap scope, phones routing, patch rolling/tail and language.
+
+Each explicit scene may define its own `routing`, `modules`, `tempo_bpm`, and stomp
+states. A top-level routing/modules baseline is copied to explicit non-base scenes so
+the same request can describe a complete three-scene preset without relying on prior
+device state.
 
 Call `nux_capabilities()` for the machine-readable catalogue and
 `nux_capabilities("AMP")` for a single section. The high-level schema intentionally

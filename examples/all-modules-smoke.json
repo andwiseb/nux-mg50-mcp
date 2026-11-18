@@ -1,0 +1,22 @@
+{
+  "preset": "97A",
+  "routing": {
+    "mode": "serial",
+    "chain": [
+      "NG",
+      "CMP",
+      "EFX",
+      "AMP",
+      "AMP2",
+      "IR",
+      "EQ",
+      "DLY",
+      "RVB",
+      "S/R",
+      "WAH",
+      "MOD",
+      "PL"
+    ]
+  },
+  "save": false
+}

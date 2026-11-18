@@ -1,0 +1,20 @@
+{
+  "preset": "97A",
+  "routing": {
+    "mode": "serial",
+    "chain": ["NG", "AMP"]
+  },
+  "modules": {
+    "NG": {
+      "enabled": true,
+      "model": "NOISE GATE",
+      "parameters": {"SENS.": 31, "DECAY": 42}
+    },
+    "AMP": {
+      "enabled": true,
+      "model": "Brit 800",
+      "parameters": {"Gain": 26}
+    }
+  },
+  "save": false
+}

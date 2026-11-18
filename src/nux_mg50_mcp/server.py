@@ -5,11 +5,10 @@ from typing import Any
 
 from mcp.server.mcpserver import MCPServer
 
-from .driver import Driver, MockDriver, NuxAudioDriver
 from .device_catalog import capabilities
-from .models import ModuleSpec, StompAssignments, ToneSpec
+from .driver import Driver, MockDriver, NuxAudioDriver
+from .models import ApplyPlan, ModuleSpec, Operation, StompAssignments, ToneSpec
 from .planner import plan_tone
-
 
 INSTRUCTIONS = """Control the NUX MG-50Li through the local NUX Audio editor.
 Prefer nux_apply_tone for complete changes: it orders preset, scene, routing, model,
@@ -73,12 +72,12 @@ def create_server(driver: Driver | None = None) -> MCPServer:
 
     @server.tool()
     def nux_set_tempo(bpm: float, scene: int | None = None) -> dict[str, Any]:
-        """Set tempo in BPM (30-300), optionally in a selected scene."""
+        """Set tempo in BPM (40-240); scene defaults to S1."""
         return active.apply(plan_tone(ToneSpec(scene=scene, tempo_bpm=bpm)))
 
     @server.tool()
     def nux_set_stomp(block: str, enabled: bool, scene: int | None = None) -> dict[str, Any]:
-        """Turn any stomp-assigned block on/off, optionally in a selected scene."""
+        """Turn any stomp-assigned block on/off; scene defaults to S1."""
         return active.apply(plan_tone(ToneSpec(scene=scene, stomp={block: enabled})))
 
     @server.tool()
@@ -101,15 +100,20 @@ def create_server(driver: Driver | None = None) -> MCPServer:
         parameters: dict[str, float | int | str | bool] | None = None,
         scene: int | None = None,
     ) -> dict[str, Any]:
-        """Select a model, bypass state, and arbitrary named knobs for one signal-chain module."""
+        """Set a module model, bypass and named knobs; scene defaults to S1."""
         spec = ModuleSpec(model=model, enabled=enabled, parameters=parameters or {})
         return active.apply(plan_tone(ToneSpec(scene=scene, modules={module: spec})))
 
     @server.tool()
-    def nux_set_control(control: str, value: float | int | str | bool) -> dict[str, Any]:
+    def nux_set_control(control: str, value: float | str | bool) -> dict[str, Any]:
         """Forward-compatible escape hatch for a visible control not yet in the high-level schema."""
-        spec = ToneSpec(settings={"other": {control: value}})
-        return active.apply(plan_tone(spec))
+        if not control.strip():
+            raise ValueError("control must not be empty")
+        plan = ApplyPlan(
+            operations=[Operation(action="set", control=control.strip(), value=value)],
+            warnings=["Changes are live but are not saved."],
+        )
+        return active.apply(plan)
 
     return server
 

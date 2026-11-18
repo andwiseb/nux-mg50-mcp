@@ -1,0 +1,12 @@
+{
+  "preset": "97A",
+  "routing": {
+    "mode": "parallel_merge",
+    "chain_a": ["NG", "AMP"],
+    "chain_b": ["DLY", "RVB"],
+    "split_mode": "chain_a_b",
+    "a_level": 33,
+    "b_level": 67
+  },
+  "save": false
+}

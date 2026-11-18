@@ -1,0 +1,30 @@
+{
+  "preset": "97A",
+  "scene": 1,
+  "routing": {
+    "mode": "serial",
+    "chain": ["NG", "AMP", "DLY"]
+  },
+  "scenes": {
+    "1": {
+      "modules": {
+        "NG": {"enabled": false, "parameters": {"SENS.": 31}}
+      },
+      "tempo_bpm": 121
+    },
+    "2": {
+      "modules": {
+        "NG": {"enabled": true},
+        "AMP": {"parameters": {"GAIN": 32}}
+      },
+      "tempo_bpm": 122
+    },
+    "3": {
+      "modules": {
+        "DLY": {"enabled": false}
+      },
+      "tempo_bpm": 123
+    }
+  },
+  "save": false
+}
