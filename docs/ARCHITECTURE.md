@@ -12,8 +12,8 @@ Claude / ChatGPT / Codex
           ▼
      Driver boundary
           │
-          ├── NUX Audio Accessibility driver (implemented)
-          └── direct USB-MIDI driver (reserved; only after hardware verification)
+          ├── direct USB-MIDI transport (discovery implemented; protocol verification in progress)
+          └── NUX Audio Accessibility compatibility driver
 ```
 
 ## Why the boundary exists
@@ -45,17 +45,21 @@ persistence by itself.
 
 NUX Audio stores the signal chain independently in S1, S2 and S3. The planner therefore
 copies a top-level routing layout and module baseline into every explicitly requested
-non-base scene unless that scene provides its own routing. The driver clears at most
-once per scene per apply transaction, so split branch A and B are rebuilt together.
+non-base scene unless that scene provides its own routing. The compatibility driver
+maps visible blocks to fixed slots, preserves exact matches, removes only mismatches or
+trailing blocks, and fills only missing slots. It does not clear and rebuild a whole
+scene merely because a chain was supplied.
 
 The native helper uses semantic Accessibility nodes where NUX Audio publishes them.
 For custom-painted Flutter controls it uses calibrated coordinates relative to the
 editor window, followed by semantic/readout verification. It never sends undocumented
 USB or preset bytes.
 
-## Direct MIDI roadmap
+## Direct MIDI transport
 
 A direct driver should not be merged from assumptions based on other NUX products.
-It needs captured MG-50Li USB-MIDI request/response pairs, firmware/version negotiation,
+CoreMIDI endpoint discovery is part of `doctor`; readiness requires an actual NUX/MG-50
+endpoint rather than only a running editor process. Mutation still needs captured
+MG-50Li USB-MIDI request/response pairs, firmware/version negotiation,
 read-back verification, timeouts and golden packet tests. It must implement the same
 `Driver` interface, leaving every MCP tool and tone file unchanged.

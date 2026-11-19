@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import CoreMIDI
 import Foundation
 import ScreenCaptureKit
 
@@ -10,6 +11,40 @@ struct Doctor: Codable {
     let appRunning: Bool
     let windowCount: Int
     let bundleIdentifier: String
+    let midiDeviceConnected: Bool
+    let midiEndpoints: [MIDIEndpoint]
+}
+
+struct MIDIEndpoint: Codable {
+    let direction: String
+    let name: String
+    let displayName: String
+    let manufacturer: String
+    let model: String
+    let uniqueID: Int32
+}
+
+struct MIDICapture: Codable {
+    let endpoint: MIDIEndpoint
+    let timestamp: UInt64
+    let bytes: [UInt8]
+}
+
+final class MIDICaptureStore: @unchecked Sendable {
+    private let lock = NSLock()
+    private var records: [MIDICapture] = []
+
+    func append(_ record: MIDICapture) {
+        lock.lock()
+        records.append(record)
+        lock.unlock()
+    }
+
+    func snapshot() -> [MIDICapture] {
+        lock.lock()
+        defer { lock.unlock() }
+        return records
+    }
 }
 
 struct Node: Codable {
@@ -54,6 +89,108 @@ func emit<T: Encodable>(_ value: T) throws {
 
 func app() -> NSRunningApplication? {
     NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier).first
+}
+
+func midiString(_ endpoint: MIDIEndpointRef, _ property: CFString) -> String {
+    var raw: Unmanaged<CFString>?
+    guard MIDIObjectGetStringProperty(endpoint, property, &raw) == noErr else { return "" }
+    return raw?.takeRetainedValue() as String? ?? ""
+}
+
+func midiInteger(_ endpoint: MIDIEndpointRef, _ property: CFString) -> Int32 {
+    var value: Int32 = 0
+    guard MIDIObjectGetIntegerProperty(endpoint, property, &value) == noErr else { return 0 }
+    return value
+}
+
+func midiEndpoints() -> [MIDIEndpoint] {
+    var endpoints: [MIDIEndpoint] = []
+    for index in 0..<MIDIGetNumberOfSources() {
+        let endpoint = MIDIGetSource(index)
+        endpoints.append(MIDIEndpoint(
+            direction: "source",
+            name: midiString(endpoint, kMIDIPropertyName),
+            displayName: midiString(endpoint, kMIDIPropertyDisplayName),
+            manufacturer: midiString(endpoint, kMIDIPropertyManufacturer),
+            model: midiString(endpoint, kMIDIPropertyModel),
+            uniqueID: midiInteger(endpoint, kMIDIPropertyUniqueID)
+        ))
+    }
+    for index in 0..<MIDIGetNumberOfDestinations() {
+        let endpoint = MIDIGetDestination(index)
+        endpoints.append(MIDIEndpoint(
+            direction: "destination",
+            name: midiString(endpoint, kMIDIPropertyName),
+            displayName: midiString(endpoint, kMIDIPropertyDisplayName),
+            manufacturer: midiString(endpoint, kMIDIPropertyManufacturer),
+            model: midiString(endpoint, kMIDIPropertyModel),
+            uniqueID: midiInteger(endpoint, kMIDIPropertyUniqueID)
+        ))
+    }
+    return endpoints
+}
+
+func isNuxEndpoint(_ endpoint: MIDIEndpoint) -> Bool {
+    let text = [endpoint.name, endpoint.displayName, endpoint.manufacturer, endpoint.model]
+        .joined(separator: " ")
+        .lowercased()
+    return text.contains("nux") || text.contains("mg-50") || text.contains("mg50")
+}
+
+func captureMIDI(seconds: Double) throws -> [MIDICapture] {
+    guard seconds >= 0.1 && seconds <= 60 else {
+        throw BridgeFailure.message("MIDI monitor duration must be between 0.1 and 60 seconds")
+    }
+    var client = MIDIClientRef()
+    guard MIDIClientCreate("NUX MG-50 Monitor" as CFString, nil, nil, &client) == noErr else {
+        throw BridgeFailure.message("could not create CoreMIDI monitor client")
+    }
+    defer { MIDIClientDispose(client) }
+
+    let store = MIDICaptureStore()
+    var ports: [MIDIPortRef] = []
+    for index in 0..<MIDIGetNumberOfSources() {
+        let source = MIDIGetSource(index)
+        let endpoint = MIDIEndpoint(
+            direction: "source",
+            name: midiString(source, kMIDIPropertyName),
+            displayName: midiString(source, kMIDIPropertyDisplayName),
+            manufacturer: midiString(source, kMIDIPropertyManufacturer),
+            model: midiString(source, kMIDIPropertyModel),
+            uniqueID: midiInteger(source, kMIDIPropertyUniqueID)
+        )
+        guard isNuxEndpoint(endpoint) else { continue }
+        var port = MIDIPortRef()
+        let status = MIDIInputPortCreateWithBlock(
+            client,
+            "NUX MG-50 Monitor \(index)" as CFString,
+            &port
+        ) { packetList, _ in
+            var packet = UnsafeMutablePointer(
+                mutating: withUnsafePointer(to: packetList.pointee.packet) { $0 }
+            )
+            for _ in 0..<packetList.pointee.numPackets {
+                let current = packet.pointee
+                let bytes = withUnsafeBytes(of: current.data) {
+                    Array($0.prefix(Int(current.length)))
+                }
+                store.append(MIDICapture(
+                    endpoint: endpoint,
+                    timestamp: current.timeStamp,
+                    bytes: bytes
+                ))
+                packet = MIDIPacketNext(packet)
+            }
+        }
+        guard status == noErr, MIDIPortConnectSource(port, source, nil) == noErr else {
+            if port != 0 { MIDIPortDispose(port) }
+            continue
+        }
+        ports.append(port)
+    }
+    defer { ports.forEach { MIDIPortDispose($0) } }
+    RunLoop.current.run(until: Date(timeIntervalSinceNow: seconds))
+    return store.snapshot()
 }
 
 func copyAttribute(_ element: AXUIElement, _ name: String) -> AnyObject? {
@@ -451,7 +588,22 @@ func run() async throws {
             let application = AXUIElementCreateApplication(running.processIdentifier)
             count = (copyAttribute(application, kAXWindowsAttribute) as? [AXUIElement])?.count ?? 0
         }
-        try emit(Doctor(accessibilityTrusted: AXIsProcessTrusted(), appRunning: running != nil, windowCount: count, bundleIdentifier: bundleIdentifier))
+        let endpoints = midiEndpoints()
+        try emit(Doctor(
+            accessibilityTrusted: AXIsProcessTrusted(),
+            appRunning: running != nil,
+            windowCount: count,
+            bundleIdentifier: bundleIdentifier,
+            midiDeviceConnected: endpoints.contains(where: isNuxEndpoint),
+            midiEndpoints: endpoints
+        ))
+    case "midi-list":
+        try emit(midiEndpoints())
+    case "midi-monitor":
+        guard args.count == 2, let seconds = Double(args[1]) else {
+            throw BridgeFailure.message("usage: midi-monitor SECONDS")
+        }
+        try emit(try captureMIDI(seconds: seconds))
     case "request-access":
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         try emit(Result(ok: AXIsProcessTrustedWithOptions(options), message: "Allow Accessibility access in System Settings, then run doctor again."))

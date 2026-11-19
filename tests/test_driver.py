@@ -16,6 +16,27 @@ class SceneBridge:
         return UINode(-1, "AXButton", "scene", "", "", 0, 0, 1, 1)
 
 
+class DoctorBridge(SceneBridge):
+    def __init__(self, *, device_connected: bool):
+        self.device_connected = device_connected
+
+    def doctor(self):
+        return {
+            "appRunning": True,
+            "accessibilityTrusted": True,
+            "midiDeviceConnected": self.device_connected,
+        }
+
+
+def test_accessibility_driver_is_not_ready_without_a_connected_device():
+    assert NuxAudioDriver(DoctorBridge(device_connected=False)).status()["ready"] is False
+
+
+def test_accessibility_driver_requires_app_permission_and_device():
+    status = NuxAudioDriver(DoctorBridge(device_connected=True)).status()
+    assert status["ready"] is True
+
+
 class TempoBridge(SceneBridge):
     def __init__(self):
         self.values: list[tuple[UINode, float, dict[str, float]]] = []
@@ -61,28 +82,74 @@ class PresetVolumeBridge(SceneBridge):
         return node
 
 
-def test_chain_is_cleared_once_in_each_scene(monkeypatch):
+def test_arrange_chain_keeps_matching_slots_without_ui_mutation(monkeypatch):
     driver = NuxAudioDriver(SceneBridge())
-    driver._routing_mode = "split_outputs"
-    deleted: list[tuple[int, str]] = []
+    slots = [(100.0, 100.0), (200.0, 100.0), (300.0, 100.0)]
+    current = [
+        UINode(1, "AXImage", "AMP1", "", "", 81, 81, 38, 38),
+        UINode(2, "AXImage", "CMP1", "", "", 181, 81, 38, 38),
+        UINode(3, "AXImage", "RVB1", "", "", 281, 81, 38, 38),
+    ]
+    deleted: list[str] = []
+    added: list[tuple[tuple[float, float], str]] = []
+    monkeypatch.setattr(driver, "_routing_slots", lambda *_args: slots)
+    monkeypatch.setattr(driver, "_chain_modules", lambda: current)
+    monkeypatch.setattr(driver, "_delete_module", lambda node: deleted.append(node.title))
+    monkeypatch.setattr(driver, "_add_chain_module", lambda slot, name: added.append((slot, name)))
 
+    result = driver._arrange_chain("routing.chain", ["AMP", "CMP", "RVB"], "serial")
+
+    assert result.title == "RVB1"
+    assert deleted == []
+    assert added == []
+
+
+def test_arrange_chain_replaces_only_mismatching_slot(monkeypatch):
+    driver = NuxAudioDriver(SceneBridge())
+    slots = [(100.0, 100.0), (200.0, 100.0), (300.0, 100.0)]
+    current = [
+        UINode(1, "AXImage", "AMP1", "", "", 81, 81, 38, 38),
+        UINode(2, "AXImage", "CMP1", "", "", 181, 81, 38, 38),
+        UINode(3, "AXImage", "RVB1", "", "", 281, 81, 38, 38),
+    ]
+    deleted: list[str] = []
+    added: list[tuple[tuple[float, float], str]] = []
+    monkeypatch.setattr(driver, "_routing_slots", lambda *_args: slots)
+    monkeypatch.setattr(driver, "_chain_modules", lambda: current)
+    monkeypatch.setattr(driver, "_delete_module", lambda node: deleted.append(node.title))
+    monkeypatch.setattr(driver, "_add_chain_module", lambda slot, name: added.append((slot, name)))
     monkeypatch.setattr(
         driver,
-        "_delete_chain",
-        lambda mode: deleted.append((driver._current_scene, mode)),
-    )
-    monkeypatch.setattr(
-        driver,
-        "_arrange_chain",
-        lambda *_args: UINode(-1, "AXImage", "chain", "", "", 0, 0, 1, 1),
+        "_find_chain_module_wait",
+        lambda name: UINode(4, "AXImage", f"{name}1", "", "", 181, 81, 38, 38),
     )
 
-    driver._apply_one(Operation(action="arrange", control="routing.chain_a", value=[]))
-    driver._apply_one(Operation(action="arrange", control="routing.chain_b", value=[]))
-    driver._apply_one(Operation(action="click", control="scene", value=2))
-    driver._apply_one(Operation(action="arrange", control="routing.chain_a", value=[]))
+    driver._arrange_chain("routing.chain", ["AMP", "MOD", "RVB"], "serial")
 
-    assert deleted == [(1, "split_outputs"), (2, "split_outputs")]
+    assert deleted == ["CMP1"]
+    assert added == [((200.0, 100.0), "MOD")]
+
+
+def test_arrange_chain_removes_only_trailing_modules(monkeypatch):
+    driver = NuxAudioDriver(SceneBridge())
+    slots = [(100.0, 100.0), (200.0, 100.0), (300.0, 100.0)]
+    current = [
+        UINode(1, "AXImage", "AMP1", "", "", 81, 81, 38, 38),
+        UINode(2, "AXImage", "CMP1", "", "", 181, 81, 38, 38),
+        UINode(3, "AXImage", "RVB1", "", "", 281, 81, 38, 38),
+    ]
+    deleted: list[str] = []
+    added: list[tuple[tuple[float, float], str]] = []
+    monkeypatch.setattr(driver, "_routing_slots", lambda *_args: slots)
+    monkeypatch.setattr(driver, "_chain_modules", lambda: current)
+    monkeypatch.setattr(driver, "_delete_module", lambda node: deleted.append(node.title))
+    monkeypatch.setattr(driver, "_add_chain_module", lambda slot, name: added.append((slot, name)))
+
+    result = driver._arrange_chain("routing.chain", ["AMP", "CMP"], "serial")
+
+    assert result.title == "CMP1"
+    assert deleted == ["RVB1"]
+    assert added == []
 
 
 def test_non_setting_operation_closes_open_settings_page(monkeypatch):

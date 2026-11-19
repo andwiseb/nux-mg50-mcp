@@ -35,9 +35,11 @@ on a real MG-50Li with NUX Audio 1.1.7. The driver verifies each rebuilt chain s
 before continuing and fails closed whenever the requested visible control cannot be
 found.
 
-The macOS driver uses NUX Audio's Accessibility surface. A transport boundary is kept
-separate so a verified direct USB-MIDI implementation can be added without changing
-the MCP tools or tone JSON format. See [architecture](docs/ARCHITECTURE.md).
+The current macOS mutation driver uses NUX Audio's Accessibility surface. Direct
+USB-MIDI discovery is implemented and direct read/write transport is being verified;
+undocumented SysEx bytes are never guessed. The transport boundary keeps the MCP tools
+and tone JSON format stable while that driver is completed. See
+[architecture](docs/ARCHITECTURE.md).
 
 Long tone reports are supported at the MCP-client layer as well as short commands.
 The report may be in any language or mix prose, headings, and tables. The client
@@ -83,8 +85,10 @@ You can trigger the macOS prompt with:
 uv run nux-mg50 request-access
 ```
 
-Open NUX Audio, connect the MG-50Li, then repeat `doctor`. A ready installation reports
-`"ready": true`.
+Connect the MG-50Li by USB, open NUX Audio, then repeat `doctor`. A ready installation
+reports `"midiDeviceConnected": true` and `"ready": true`. `midiEndpoints` contains
+the exact CoreMIDI endpoints used for that decision, so merely opening the editor can
+no longer produce a false-positive health check.
 
 Screen Recording is optional. It is used only to read the painted color of an existing
 Console mute or pre-existing module bypass before deciding whether a click is needed.
@@ -185,7 +189,8 @@ uv run nux-mg50 apply --dry-run examples/complete-tone.json
 - Changes are **not saved by default**. Set `save: true` explicitly.
 - `dry_run: true` produces the exact ordered operation list without touching the UI.
 - The server never writes guessed bytes to a preset or USB-MIDI endpoint.
-- Chain replacement is destructive only in the selected live scene; preset storage is
+- Chain application preserves every block already in the correct slot. It removes only
+  mismatching/trailing blocks and adds only missing ones; preset storage remains
   untouched until `save: true` is supplied.
 - Unknown firmware controls remain available through `nux_snapshot` and
   `nux_set_control`; the catalogue is guidance, not a version lock.
@@ -201,6 +206,13 @@ The native helper is intentionally small and auditable. Build it after editing:
 
 ```bash
 ./scripts/build-bridge.sh
+```
+
+For protocol verification, a read-only CoreMIDI monitor records only real MG-50Li
+source packets and never transmits bytes:
+
+```bash
+uv run nux-mg50 midi-monitor --seconds 10
 ```
 
 Hardware/UI verification instructions are in [CONTRIBUTING.md](CONTRIBUTING.md).

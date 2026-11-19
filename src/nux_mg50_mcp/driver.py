@@ -475,6 +475,18 @@ class NuxAudioDriver(Driver):
         if self._chain_modules():
             raise BridgeError("could not clear the existing signal chain")
 
+    def _delete_module(self, target: UINode) -> None:
+        """Delete exactly one visible chain block, retrying only its own menu action."""
+        point = (target.x + target.width / 2, target.y + target.height / 2)
+        last_error: BridgeError | None = None
+        for _attempt in range(3):
+            try:
+                self.bridge.run("delete-at", point[0], point[1])
+                return
+            except BridgeError as error:
+                last_error = error
+        raise ControlNotFound("module context-menu Delete action did not open") from last_error
+
     def _select_routing_mode(self, mode: str) -> UINode:
         window = self.bridge.window()
         # NUX Audio order: serial, parallel split + merge, split to OUT/XLR.
@@ -584,17 +596,51 @@ class NuxAudioDriver(Driver):
         slots = self._routing_slots(mode, branch)
         if len(modules) > len(slots):
             raise BridgeError(f"{control} accepts at most {len(slots)} modules in {mode} mode")
+
+        desired = [canonical_module(module) for module in modules]
+        occupied: dict[int, tuple[UINode, str]] = {}
+        for node in self._chain_modules():
+            center = (node.x + node.width / 2, node.y + node.height / 2)
+            distances = [(center[0] - slot[0]) ** 2 + (center[1] - slot[1]) ** 2 for slot in slots]
+            if not distances:
+                continue
+            index = min(range(len(distances)), key=distances.__getitem__)
+            if distances[index] > 12**2:
+                continue
+            label = node.title or node.description or node.value
+            occupied[index] = (node, canonical_module(label.rstrip("0123456789")))
+
+        # Fixed chain slots do not need a full destructive rebuild. Preserve exact
+        # matches, delete only mismatches/extras, then fill only the resulting holes.
+        mismatches = [
+            index
+            for index, (_node, current) in occupied.items()
+            if index >= len(desired) or current != desired[index]
+        ]
+        for index in sorted(mismatches, reverse=True):
+            self._delete_module(occupied[index][0])
+            occupied.pop(index)
+
         last: UINode | None = None
-        for module, slot in zip(modules, slots, strict=False):
+        for index, (module, canonical) in enumerate(zip(modules, desired, strict=True)):
+            existing = occupied.get(index)
+            if existing is not None and existing[1] == canonical:
+                last = existing[0]
+                continue
+            slot = slots[index]
             self._add_chain_module(slot, module)
             last = self._find_chain_module_wait(module)
-            self._rebuilt_modules.add(canonical_module(module))
+            self._rebuilt_modules.add(canonical)
         return last or self.bridge.find("Chain")
 
     def status(self) -> dict[str, Any]:
         result = self.bridge.doctor()
         result["driver"] = "nux-audio-accessibility"
-        result["ready"] = bool(result.get("appRunning") and result.get("accessibilityTrusted"))
+        result["ready"] = bool(
+            result.get("midiDeviceConnected")
+            and result.get("appRunning")
+            and result.get("accessibilityTrusted")
+        )
         return result
 
     def snapshot(self) -> dict[str, Any]:
@@ -711,16 +757,6 @@ class NuxAudioDriver(Driver):
             self._page = None
         elif operation.action == "arrange":
             mode = getattr(self, "_routing_mode", "serial")
-            if self._current_scene not in self._cleared_scenes:
-                self._delete_chain(mode)
-                self._rebuilt_modules.clear()
-                self._module_slots.clear()
-                self._module_states = {
-                    key: value
-                    for key, value in self._module_states.items()
-                    if key[0] != self._current_scene
-                }
-                self._cleared_scenes.add(self._current_scene)
             node = self._arrange_chain(control, list(operation.value), mode)
         elif control in {"routing.split_mode", "routing.a_level", "routing.b_level"}:
             if control == "routing.split_mode":

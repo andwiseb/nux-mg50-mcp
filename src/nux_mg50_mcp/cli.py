@@ -19,6 +19,8 @@ def parser() -> argparse.ArgumentParser:
     subs.add_parser("doctor", help="check NUX Audio and Accessibility permission")
     subs.add_parser("request-access", help="open the macOS Accessibility permission prompt")
     subs.add_parser("snapshot", help="dump visible NUX Audio semantics as JSON")
+    monitor = subs.add_parser("midi-monitor", help="capture read-only MG-50Li CoreMIDI input")
+    monitor.add_argument("--seconds", type=float, default=5.0)
     apply = subs.add_parser("apply", help="apply a ToneSpec JSON file")
     apply.add_argument("file", type=Path)
     apply.add_argument("--dry-run", action="store_true")
@@ -37,6 +39,8 @@ def main(argv: list[str] | None = None) -> int:
         output = bridge.request_access()
     elif args.command == "snapshot":
         output = driver.snapshot()
+    elif args.command == "midi-monitor":
+        output = bridge.run("midi-monitor", args.seconds)
     else:
         spec = ToneSpec.model_validate_json(args.file.read_text(encoding="utf-8"))
         plan = plan_tone(spec)
